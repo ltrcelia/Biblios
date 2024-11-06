@@ -3,10 +3,14 @@
 namespace App\Entity;
 
 use App\Repository\AuthorRepository;
-use Doctrine\DBAL\Types\Types;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: AuthorRepository::class)]
+#[UniqueEntity(['name'])]
 class Author
 {
     #[ORM\Id]
@@ -14,20 +18,29 @@ class Author
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Assert\Length(min: 10)]
+    #[Assert\NotBlank()]
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
+    #[Assert\NotBlank()]
     #[ORM\Column]
     private ?\DateTimeImmutable $dateOfBirth = null;
 
+    #[Assert\GreaterThan(propertyPath: 'dateOfBirth')]
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $dateOfDeath = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $nationality = null;
 
-    #[ORM\Column(type: Types::ARRAY)]
-    private array $books = [];
+    #[ORM\ManyToMany(targetEntity: Book::class, inversedBy: 'authors')]
+    private Collection $books;
+
+    public function __construct()
+    {
+        $this->books = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -82,14 +95,26 @@ class Author
         return $this;
     }
 
-    public function getBooks(): array
+    /**
+     * @return Collection<int, Book>
+     */
+    public function getBooks(): Collection
     {
         return $this->books;
     }
 
-    public function setBooks(array $books): static
+    public function addBook(Book $book): static
     {
-        $this->books = $books;
+        if (!$this->books->contains($book)) {
+            $this->books->add($book);
+        }
+
+        return $this;
+    }
+
+    public function removeBook(Book $book): static
+    {
+        $this->books->removeElement($book);
 
         return $this;
     }
